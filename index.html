@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nota Fiscal de Políticos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c2f3f;
+            color: white;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background-color: #3a3f58;
+            padding: 15px;
+            border-radius: 10px;
+            width: 320px;
+        }
+
+        button {
+            background-color: #a0c4ff;
+            border: none;
+            padding: 8px 12px;
+            margin: 2px;
+            border-radius: 5px;
+            cursor: pointer;
+            color: #1a1a1a;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #89b7f0;
+        }
+
+        input[list] {
+            padding: 5px;
+            border-radius: 5px;
+            margin: 10px 0;
+            width: 150px;
+        }
+
+        .gasto {
+            margin-bottom: 10px;
+            text-align: left;
+            font-size: 0.9em;
+            background-color: #4a4e6b;
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .paginacao {
+            margin-top: 10px;
+        }
+
+        .linha {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>NOTA FISCAL DE POLÍTICOS - DF</h1>
+    <div class="linha">
+        <button onclick="window.location.href='home.html'">🏠 Home</button>
+        <button onclick="window.location.href='desenvolvimento.html'">🛠 Desenvolvimento</button>
+    </div>
+
+    <div class="container">
+
+        <div class="card">
+            <select id="politico1">
+                <option value="">Escolha um político</option>
+            </select>
+            <div class="linha">
+                <button onclick="carregarPolitico(1)">Carregar Dados</button>
+                <input list="tipos1" id="filtro1" placeholder="Filtrar tipo..." onchange="filtrarGastos(1)">
+                <datalist id="tipos1"></datalist>
+            </div>
+            <p><strong>Nome:</strong> <span id="nome1">---</span></p>
+            <p><strong>Partido:</strong> <span id="partido1">---</span></p>
+            <p><strong>Email:</strong> <span id="email1">---</span></p>
+            <p><strong>Nota Fiscal:</strong></p>
+            <div id="nota1">---</div>
+            <div id="paginacao1" class="paginacao"></div>
+        </div>
+
+        <div class="card">
+            <select id="politico2">
+                <option value="">Escolha um político</option>
+            </select>
+            <div class="linha">
+                <button onclick="carregarPolitico(2)">Carregar Dados</button>
+                <input list="tipos2" id="filtro2" placeholder="Filtrar tipo..." onchange="filtrarGastos(2)">
+                <datalist id="tipos2"></datalist>
+            </div>
+            <p><strong>Nome:</strong> <span id="nome2">---</span></p>
+            <p><strong>Partido:</strong> <span id="partido2">---</span></p>
+            <p><strong>Email:</strong> <span id="email2">---</span></p>
+            <p><strong>Nota Fiscal:</strong></p>
+            <div id="nota2">---</div>
+            <div id="paginacao2" class="paginacao"></div>
+        </div>
+    </div>
+
+    <script>
+        let politicos = [];
+        let gastos1 = [], gastos2 = [];
+        let gastosFiltrados1 = [], gastosFiltrados2 = [];
+
+        async function carregarDeputados() {
+            const resposta = await fetch('https://dadosabertos.camara.leg.br/api/v2/deputados?siglaUf=DF&itens=100');
+            const json = await resposta.json();
+            politicos = json.dados;
+
+            const select1 = document.getElementById("politico1");
+            const select2 = document.getElementById("politico2");
+
+            politicos.forEach((p, index) => {
+                const opt1 = new Option(p.nome, index);
+                const opt2 = new Option(p.nome, index);
+                select1.add(opt1);
+                select2.add(opt2);
+            });
+        }
+
+        async function buscarGastosDeputado(idDeputado) {
+            const resposta = await fetch(`https://dadosabertos.camara.leg.br/api/v2/deputados/${idDeputado}/despesas?ordem=DESC&ordenarPor=dataDocumento&itens=100`);
+            const json = await resposta.json();
+            return json.dados;
+        }
+
+        function atualizarFiltro(gastos, num) {
+            const datalist = document.getElementById(`tipos${num}`);
+            datalist.innerHTML = "";
+            const tipos = [...new Set(gastos.map(g => g.tipoDespesa))];
+            tipos.forEach(tipo => {
+                const opt = document.createElement("option");
+                opt.value = tipo;
+                datalist.appendChild(opt);
+            });
+        }
+
+        function filtrarGastos(num) {
+            const filtro = document.getElementById(`filtro${num}`).value.trim();
+            const base = num === 1 ? gastos1 : gastos2;
+            const destino = num === 1 ? "gastosFiltrados1" : "gastosFiltrados2";
+
+            if (filtro === "") {
+                window[destino] = base;
+            } else {
+                window[destino] = base.filter(g => g.tipoDespesa.toLowerCase().includes(filtro.toLowerCase()));
+            }
+            exibirGastos(window[destino], 1, num);
+        }
+
+        function exibirGastos(gastos, pagina, num) {
+            const inicio = (pagina - 1) * 10;
+            const fim = inicio + 10;
+            const gastosPagina = gastos.slice(inicio, fim);
+            const divNota = document.getElementById(`nota${num}`);
+            divNota.innerHTML = "";
+
+            gastosPagina.forEach(g => {
+                divNota.innerHTML += `
+                    <div class="gasto">
+                        <strong>${g.tipoDespesa}</strong><br>
+                        ${g.dataDocumento} — R$ ${g.valorDocumento.toFixed(2)}<br>
+                        <em>${g.nomeFornecedor}</em>
+                    </div>
+                `;
+            });
+
+            const paginacao = document.getElementById(`paginacao${num}`);
+            paginacao.innerHTML = "";
+            const totalPaginas = Math.ceil(gastos.length / 10);
+            for (let i = 1; i <= totalPaginas; i++) {
+                paginacao.innerHTML += `<button onclick="exibirGastos(gastosFiltrados${num}, ${i}, ${num})">${i}</button>`;
+            }
+        }
+
+        async function carregarPolitico(num) {
+            const select = document.getElementById(`politico${num}`);
+            const index = select.value;
+            if (index === "") return;
+
+            const dados = politicos[index];
+            document.getElementById(`nome${num}`).innerText = dados.nome;
+            document.getElementById(`partido${num}`).innerText = dados.siglaPartido;
+            document.getElementById(`email${num}`).innerText = dados.email || "Não disponível";
+
+            const gastos = await buscarGastosDeputado(dados.id);
+            if (num === 1) gastos1 = gastos;
+            else gastos2 = gastos;
+
+            if (gastos.length === 0) {
+                document.getElementById(`nota${num}`).innerHTML = "<p>Sem gastos recentes registrados.</p>";
+                document.getElementById(`paginacao${num}`).innerHTML = "";
+            } else {
+                if (num === 1) gastosFiltrados1 = gastos;
+                else gastosFiltrados2 = gastos;
+
+                atualizarFiltro(gastos, num);
+                exibirGastos(gastos, 1, num);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", carregarDeputados);
+    </script>
+</body>
+
+</html>
