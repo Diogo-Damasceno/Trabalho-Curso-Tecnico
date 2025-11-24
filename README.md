@@ -1,1 +1,1 @@
-# Trabalho-tcc
+# Trabalho-Curso-Tecnico
